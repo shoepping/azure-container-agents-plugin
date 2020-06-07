@@ -15,8 +15,6 @@ import com.microsoft.jenkins.containeragents.util.AzureContainerUtils;
 import com.microsoft.jenkins.containeragents.util.Constants;
 import com.microsoft.jenkins.containeragents.aci.volumes.AzureFileVolume;
 import com.microsoft.azure.management.Azure;
-import com.microsoft.azure.management.resources.Deployment;
-import com.microsoft.azure.management.resources.DeploymentMode;
 import com.microsoft.jenkins.containeragents.util.DockerRegistryUtils;
 import hudson.EnvVars;
 import hudson.security.ACL;
@@ -27,6 +25,7 @@ import org.jenkinsci.plugins.docker.commons.credentials.DockerRegistryEndpoint;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -34,7 +33,7 @@ import java.util.Map;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
+import java.util.stream.Collectors;
 
 
 public final class AciService {
@@ -90,22 +89,34 @@ public final class AciService {
                 addAzureFileVolumeNode(tmp, mapper, volume);
             }
 
-            // register the deployment for cleanup
-            AciCleanTask.DeploymentRegistrar deploymentRegistrar = AciCleanTask.DeploymentRegistrar.getInstance();
-            deploymentRegistrar.registerDeployment(cloud.getName(), cloud.getResourceGroup(), deployName);
+            // register the container group for cleanup
+            AciContainerGroupsCleanTask.ContainerGroupsRegistrar
+                    containerGroupRegistrar = AciContainerGroupsCleanTask.ContainerGroupsRegistrar.getInstance();
+            containerGroupRegistrar.registerContainerGroups(cloud.getName(), cloud.getResourceGroup(), deployName);
 
-            azureClient.deployments()
-                    .define(deployName)
+            String networkProfileName = "aci-network-profile-build-env-06.01-vnet-azure-aci-06.01-subnet";
+            azureClient.containerGroups().define(agent.getNodeName())
+                    .withRegion(azureClient.resourceGroups().getByName(cloud.getResourceGroup()).regionName())
                     .withExistingResourceGroup(cloud.getResourceGroup())
-                    .withTemplate(tmp.toString())
-                    .withParameters("{}")
-                    .withMode(DeploymentMode.INCREMENTAL)
-                    .beginCreate();
+                    .withLinux()
+                    .withPublicImageRegistryOnly()
+                    .withoutVolume()
+                    .defineContainerInstance(agent.getNodeName())
+                    .withImage(template.getImage())
+                    .withExternalTcpPort(Integer.parseInt(template.getSshPort()))
+                    .withCpuCoreCount(Double.parseDouble(template.getCpu()))
+                    .withMemorySizeInGB(Double.parseDouble(template.getMemory()))
+                    .withEnvironmentVariables(
+                            template.getEnvVars().stream().collect(
+                                    Collectors.toMap(PodEnvVar::getKey, PodEnvVar::getValue)))
+                    .attach()
+                    .withNetworkProfileId(azureClient.subscriptionId(), cloud.getResourceGroup(), networkProfileName)
+                    .withTag("jenkinsInstance", Jenkins.getInstance().getLegacyInstanceId())
+                    .withTag("CREATION_TIME", String.valueOf(Instant.now().toEpochMilli()))
+                    .create();
 
             //register deployName
             agent.setDeployName(deployName);
-
-            //Wait deployment to success
 
             final int retryInterval = 10 * 1000;
 
@@ -114,30 +125,32 @@ public final class AciService {
                 if (AzureContainerUtils.isTimeout(template.getTimeout(), stopWatch.getTime())) {
                     throw new TimeoutException("Deployment timeout");
                 }
-                Deployment deployment
-                        = azureClient.deployments().getByResourceGroup(cloud.getResourceGroup(), deployName);
+                ContainerGroup containerGroup =
+                    azureClient.containerGroups().getByResourceGroup(cloud.getResourceGroup(), agent.getNodeName());
 
-                if (deployment.provisioningState().equalsIgnoreCase("succeeded")) {
+                if (containerGroup.provisioningState().equalsIgnoreCase("succeeded")) {
                     LOGGER.log(Level.INFO, "Deployment {0} succeed", deployName);
                     break;
-                } else if (deployment.provisioningState().equalsIgnoreCase("Failed")) {
+                } else if (containerGroup.provisioningState().equalsIgnoreCase("Failed")) {
                     throw new Exception(String.format("Deployment %s status: Failed", deployName));
                 } else {
                     // If half of time passed, we need to inspect what happened from logs
                     if (AzureContainerUtils.isHalfTimePassed(template.getTimeout(), stopWatch.getTime())) {
-                        ContainerGroup containerGroup
+                        ContainerGroup containerGrp
                                 = azureClient.containerGroups()
                                 .getByResourceGroup(cloud.getResourceGroup(), agent.getNodeName());
-                        if (containerGroup != null) {
+                        if (containerGrp != null) {
                             LOGGER.log(Level.INFO, "Logs from container {0}: {1}",
                                     new Object[]{agent.getNodeName(),
-                                            containerGroup.getLogContent(agent.getNodeName())});
+                                            containerGrp.getLogContent(agent.getNodeName())});
                         }
                     }
                     Thread.sleep(retryInterval);
                 }
             }
         } catch (Exception e) {
+
+            e.printStackTrace();
             throw new Exception(e.getMessage());
         }
     }
@@ -282,9 +295,9 @@ public final class AciService {
             properties.clear();
             if (deployName != null) {
                 // Only to delete succeeded deployments for future debugging.
-                if (azureClient.deployments().getByResourceGroup(resourceGroup, deployName).provisioningState()
+                if (azureClient.containerGroups().getByResourceGroup(resourceGroup, deployName).provisioningState()
                         .equalsIgnoreCase("succeeded")) {
-                    azureClient.deployments().deleteByResourceGroup(resourceGroup, deployName);
+                    azureClient.containerGroups().deleteByResourceGroup(resourceGroup, deployName);
                     LOGGER.log(Level.INFO, "Delete ACI deployment: {0} successfully", deployName);
                     properties.put(Constants.AI_ACI_NAME, containerGroupName);
                     properties.put(Constants.AI_ACI_DEPLOYMENT_NAME, deployName);

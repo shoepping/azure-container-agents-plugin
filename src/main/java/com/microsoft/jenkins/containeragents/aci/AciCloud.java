@@ -124,6 +124,7 @@ public class AciCloud extends Cloud {
 
                                     return agent;
                                 } catch (Exception e) {
+                                    e.printStackTrace();
                                     LOGGER.log(Level.WARNING, "AciCloud: Provision agent {0} failed: {1}",
                                             new Object[] {agent == null ? "Known agent node" : agent.getNodeName(),
                                                     e.getMessage()});
