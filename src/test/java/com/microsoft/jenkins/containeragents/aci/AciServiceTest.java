@@ -52,7 +52,7 @@ public class AciServiceTest {
         cloud = Mockito.mock(AciCloud.class);
         Mockito.when(cloud.getAzureClient()).thenReturn(client);
         Mockito.when(cloud.getResourceGroup()).thenReturn(RESOURCE_GROUP_NAME);
-        String SSH_KEY = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCx1IH/KVuZAHA4dWUg8cfJvuy4DFXrnkh+Oi/hl1mh+LfLRsPym6oPDqhIvyOvNDULJzN3ptgoMmFMZhfbs9uz9wo/PWFExsHHHtgKT6dLk2RZIqRBpHr7nzDNvGGOeQStgquvlzMpc2n8mcbSMdXUKi5TulQ079+jblg4ZXM8QEyI0CeMhigmL2+M8o3N15bXyd9/C0yHDTeQipeqj2JtVruaeeO4b5CJHbloF6WK+nIfEUBxB7IRp+0BjxM7XkTdLq8olbx17mY2c5Lkz9Bl0K3+/N0pyOiNJS4RRlpGTxNamoP4Z27LwFYomY7r2nTdwGByogEqMk//1bQt9XKP jenkins@jenkins.org";
+        String SSH_KEY = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCx1IH/KVuZAHA4dWUg8cfJvuy4DFXrnkh+Oi/hl1mh+LfLRsPym6oPDqhIvyOvNDULJzN3ptgoMmFMZhfbs9uz9wo/PWFExsHHHtgKT6dLk2RZIqRBpHr7nzDNvGGOeQStgquvlzMpc2n8mcbSMdXUKi5TulQ079+jblg4ZXM8QEyI0CeMhigmL2+M8o3N15bXyd9/C0yHDTeQipeqj2JtVruaeeO4b5CJHbloF6WK+nIfEUBxB7IRp+0BjxM7XkTdLq8olbx17mY2c5Lkz9Bl0K3+/N0pyOiNJS4RRlpGTxNamoP4Z27LwFYomY7r2nTdwGByogEqMk//1bQt9XKp jenkins@jenkins.org";
         PodEnvVar podEnvVar = new PodEnvVar("JENKINS_AGENT_SSH_PUBKEY", SSH_KEY);
         DockerRegistryEndpoint dockerRegistryEndpoint = new DockerRegistryEndpoint(null, null);
         AciPort aciPort = new AciPort("22");
