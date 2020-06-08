@@ -7,7 +7,6 @@ import com.microsoft.jenkins.containeragents.ContainerPlugin;
 import com.microsoft.jenkins.containeragents.PodEnvVar;
 import com.microsoft.jenkins.containeragents.util.AzureContainerUtils;
 import com.microsoft.jenkins.containeragents.util.Constants;
-import jenkins.model.Jenkins;
 import org.apache.commons.lang3.time.StopWatch;
 
 import java.time.Instant;
@@ -25,7 +24,7 @@ public final class AciService {
     public static void createDeployment(final AciCloud cloud,
                                         final AciContainerTemplate template,
                                         final AciAgent agent,
-                                        final StopWatch stopWatch) throws Exception {
+                                        final StopWatch stopWatch, String jenkinsInstanceId) throws Exception {
         String deployName = getDeploymentName(template);
 
         try {
@@ -55,7 +54,7 @@ public final class AciService {
                                     Collectors.toMap(PodEnvVar::getKey, PodEnvVar::getValue)))
                     .attach()
                     .withNetworkProfileId(azureClient.subscriptionId(), cloud.getResourceGroup(), networkProfileName)
-                    .withTag("jenkinsInstance", Jenkins.getInstance().getLegacyInstanceId())
+                    .withTag("jenkinsInstance", jenkinsInstanceId)
                     .withTag("CREATION_TIME", String.valueOf(Instant.now().toEpochMilli()))
                     .create();
 
