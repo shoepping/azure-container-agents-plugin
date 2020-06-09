@@ -81,7 +81,7 @@ public class AciServiceTest {
     @Test
     public void testCreateDeployment() throws Exception {
         AciService.createDeployment(
-                cloud, aciContainerTemplate, aciAgent, StopWatch.createStarted(), "jenkins_instance_id");
+                cloud, aciContainerTemplate, StopWatch.createStarted(), "agentName", "deployName");
     }
 
 }
