@@ -7,6 +7,7 @@ import com.microsoft.jenkins.containeragents.ContainerPlugin;
 import com.microsoft.jenkins.containeragents.PodEnvVar;
 import com.microsoft.jenkins.containeragents.util.AzureContainerUtils;
 import com.microsoft.jenkins.containeragents.util.Constants;
+import jenkins.model.Jenkins;
 import org.apache.commons.lang3.time.StopWatch;
 
 import java.time.Instant;
@@ -23,9 +24,9 @@ public final class AciService {
 
     public static void createDeployment(final AciCloud cloud,
                                         final AciContainerTemplate template,
-                                        final AciAgent agent,
-                                        final StopWatch stopWatch, String jenkinsInstanceId) throws Exception {
-        String deployName = getDeploymentName(template);
+                                        final StopWatch stopWatch,
+                                        final String agentName,
+                                        final String deployName) throws Exception {
 
         try {
             final Azure azureClient = cloud.getAzureClient();
@@ -38,13 +39,13 @@ public final class AciService {
             containerGroupRegistrar.registerContainerGroups(cloud.getName(), cloud.getResourceGroup(), deployName);
 
             String networkProfileName = "aci-network-profile-build-env-06.01-vnet-azure-aci-06.01-subnet";
-            azureClient.containerGroups().define(agent.getNodeName())
+            azureClient.containerGroups().define(agentName)
                     .withRegion(azureClient.resourceGroups().getByName(cloud.getResourceGroup()).regionName())
                     .withExistingResourceGroup(cloud.getResourceGroup())
                     .withLinux()
                     .withPublicImageRegistryOnly()
                     .withoutVolume()
-                    .defineContainerInstance(agent.getNodeName())
+                    .defineContainerInstance(agentName)
                     .withImage(template.getImage())
                     .withExternalTcpPort(Integer.parseInt(template.getSshPort()))
                     .withCpuCoreCount(Double.parseDouble(template.getCpu()))
@@ -54,12 +55,9 @@ public final class AciService {
                                     Collectors.toMap(PodEnvVar::getKey, PodEnvVar::getValue)))
                     .attach()
                     .withNetworkProfileId(azureClient.subscriptionId(), cloud.getResourceGroup(), networkProfileName)
-                    .withTag("jenkinsInstance", jenkinsInstanceId)
+                    .withTag("jenkinsInstance", Jenkins.getInstance().getLegacyInstanceId())
                     .withTag("CREATION_TIME", String.valueOf(Instant.now().toEpochMilli()))
                     .create();
-
-            //register deployName
-            agent.setDeployName(deployName);
 
             final int retryInterval = 10 * 1000;
 
@@ -69,7 +67,7 @@ public final class AciService {
                     throw new TimeoutException("Deployment timeout");
                 }
                 ContainerGroup containerGroup =
-                    azureClient.containerGroups().getByResourceGroup(cloud.getResourceGroup(), agent.getNodeName());
+                    azureClient.containerGroups().getByResourceGroup(cloud.getResourceGroup(), agentName);
 
                 if (containerGroup.provisioningState().equalsIgnoreCase("succeeded")) {
                     LOGGER.log(Level.INFO, "Deployment {0} succeed", deployName);
@@ -81,11 +79,11 @@ public final class AciService {
                     if (AzureContainerUtils.isHalfTimePassed(template.getTimeout(), stopWatch.getTime())) {
                         ContainerGroup containerGrp
                                 = azureClient.containerGroups()
-                                .getByResourceGroup(cloud.getResourceGroup(), agent.getNodeName());
+                                .getByResourceGroup(cloud.getResourceGroup(), agentName);
                         if (containerGrp != null) {
                             LOGGER.log(Level.INFO, "Logs from container {0}: {1}",
-                                    new Object[]{agent.getNodeName(),
-                                            containerGrp.getLogContent(agent.getNodeName())});
+                                    new Object[]{agentName,
+                                            containerGrp.getLogContent(agentName)});
                         }
                     }
                     Thread.sleep(retryInterval);

@@ -41,7 +41,7 @@ public class AciAgent extends AbstractCloudSlave implements ISSHLaunchable {
 
     private final String resourceGroup;
 
-    private String deployName = null;
+    private String deployName;
 
     private final String sshCredentialsId;
 
@@ -52,11 +52,7 @@ public class AciAgent extends AbstractCloudSlave implements ISSHLaunchable {
     private String host;
 
     @DataBoundConstructor
-    public AciAgent(AciCloud cloud, AciContainerTemplate template) throws Descriptor.FormException, IOException {
-        this(cloud, template, generateAgentName(template));
-    }
-
-    public AciAgent(AciCloud cloud, AciContainerTemplate template, String agentName)
+    public AciAgent(AciCloud cloud, AciContainerTemplate template, String agentName, String deployName, String ip)
             throws Descriptor.FormException, IOException {
         super(agentName,
                 "",
@@ -67,16 +63,16 @@ public class AciAgent extends AbstractCloudSlave implements ISSHLaunchable {
                 template.getLaunchMethodType().equals(Constants.LAUNCH_METHOD_JNLP)
                         ? new JNLPLauncher()
                         : new hudson.plugins.sshslaves.SSHLauncher(
-                            agentName,   // Host
-                            Integer.parseInt(template.getSshPort()),      // Port
-                            template.getSshCredentialsId(), // Credentials
-                            (String) null,  // JVM Options
-                            "/usr/local/openjdk-11/bin/java",      // JavaPath
-                            (String) null,  // Prefix Start Slave Command
-                            (String) null,  // Suffix Start Slave Command
-                            (Integer) null, // Connection Timeout in Seconds
-                            (Integer) null, // Maximum Number of Retries
-                            (Integer) null, // The number of seconds to wait between retries
+                            ip,
+                            Integer.parseInt(template.getSshPort()),
+                            template.getSshCredentialsId(),
+                            (String) null,
+                            "/usr/local/openjdk-11/bin/java",
+                            (String) null,
+                            (String) null,
+                            (Integer) null,
+                            (Integer) null,
+                            (Integer) null,
                             new NonVerifyingKeyVerificationStrategy()),
                 template.getRetentionStrategy(),
                 Collections.<NodeProperty<Node>>emptyList());
@@ -86,6 +82,7 @@ public class AciAgent extends AbstractCloudSlave implements ISSHLaunchable {
         this.sshCredentialsId = template.getSshCredentialsId();
         this.sshPort = template.getSshPort();
         this.launchType = template.getLaunchMethodType();
+        this.deployName = deployName;
     }
 
     @Override

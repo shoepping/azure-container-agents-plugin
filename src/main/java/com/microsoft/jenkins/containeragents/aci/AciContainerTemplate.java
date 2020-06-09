@@ -21,7 +21,6 @@ import hudson.security.ACL;
 import hudson.slaves.RetentionStrategy;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
-import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.time.StopWatch;
 import org.jenkinsci.plugins.docker.commons.credentials.DockerRegistryEndpoint;
@@ -125,8 +124,9 @@ public class AciContainerTemplate extends AbstractDescribableImpl<AciContainerTe
         setAvailable(true);
     }
 
-    public void provisionAgents(AciCloud cloud, AciAgent agent, StopWatch stopWatch) throws Exception {
-        AciService.createDeployment(cloud, this, agent, stopWatch, Jenkins.getInstance().getLegacyInstanceId());
+    public void provisionAgents(AciCloud cloud, StopWatch stopWatch,
+                                String agentName, String deployName) throws Exception {
+        AciService.createDeployment(cloud, this, stopWatch, agentName, deployName);
     }
 
     public boolean isJnlp() {

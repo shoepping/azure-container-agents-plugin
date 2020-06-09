@@ -83,12 +83,12 @@ public class AciCloud extends Cloud {
                             public Node call() throws Exception {
                                 AciAgent agent = null;
                                 final Map<String, String> properties = new HashMap<>();
+                                String agentName = AzureContainerUtils.generateName(
+                                        template.getName(), Constants.ACI_RANDOM_NAME_LENGTH);
+                                String deployName = AzureContainerUtils.generateName(
+                                        template.getName(), Constants.ACI_DEPLOYMENT_RANDOM_NAME_LENGTH);
 
                                 try {
-                                    agent = new AciAgent(AciCloud.this, template);
-
-                                    LOGGER.log(Level.INFO, "Add ACI node: {0}", agent.getNodeName());
-                                    Jenkins.getInstance().addNode(agent);
 
                                     //start a timeWatcher
                                     StopWatch stopWatch = new StopWatch();
@@ -97,12 +97,18 @@ public class AciCloud extends Cloud {
                                     //BI properties
                                     properties.put(AppInsightsConstants.AZURE_SUBSCRIPTION_ID,
                                             AzureCredentials.getServicePrincipal(credentialsId).getSubscriptionId());
-                                    properties.put(Constants.AI_ACI_NAME, agent.getNodeName());
+                                    properties.put(Constants.AI_ACI_NAME, agentName);
                                     properties.put(Constants.AI_ACI_CPU_CORE, template.getCpu());
 
                                     //Deploy ACI and wait
-                                    template.provisionAgents(AciCloud.this, agent, stopWatch);
+                                    template.provisionAgents(AciCloud.this, stopWatch, agentName, deployName);
 
+                                    agent = new AciAgent(
+                                            AciCloud.this, template, agentName, deployName, getAgentIp(agentName));
+
+
+                                    LOGGER.log(Level.INFO, "Add ACI node: {0}", agentName);
+                                    Jenkins.getInstance().addNode(agent);
                                     if (template.getLaunchMethodType().equals(Constants.LAUNCH_METHOD_JNLP)) {
                                         //wait JNLP to online
                                         waitToOnline(agent, template.getTimeout(), stopWatch);
@@ -114,7 +120,6 @@ public class AciCloud extends Cloud {
                                         }
                                         computer.connect(false).get();
                                     }
-
                                     addIpEnv(agent);
 
                                     provisionRetryStrategy.success(template.getName());
@@ -126,7 +131,7 @@ public class AciCloud extends Cloud {
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                     LOGGER.log(Level.WARNING, "AciCloud: Provision agent {0} failed: {1}",
-                                            new Object[] {agent == null ? "Known agent node" : agent.getNodeName(),
+                                            new Object[] {agent == null ? "Known agent node" : agentName,
                                                     e.getMessage()});
 
                                     properties.put("Message", e.getMessage());
@@ -174,6 +179,13 @@ public class AciCloud extends Cloud {
             }
         }
         return null;
+    }
+
+    private String getAgentIp(String agentName) throws Exception {
+        Azure azureClient = getAzureClient();
+
+        return azureClient.containerGroups().getByResourceGroup(resourceGroup, agentName).ipAddress();
+
     }
 
     public void addIpEnv(AciAgent agent) throws Exception {
