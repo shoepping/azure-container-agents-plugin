@@ -5,7 +5,6 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.microsoft.jenkins.containeragents.remote.ISSHLaunchable;
-import com.microsoft.jenkins.containeragents.remote.SSHLauncher;
 import com.microsoft.jenkins.containeragents.util.AzureContainerUtils;
 import com.microsoft.jenkins.containeragents.util.Constants;
 import hudson.Extension;
@@ -13,12 +12,13 @@ import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Node;
 import hudson.model.TaskListener;
+import hudson.plugins.sshslaves.verifiers.NonVerifyingKeyVerificationStrategy;
 import hudson.security.ACL;
-import hudson.slaves.AbstractCloudComputer;
 import hudson.slaves.AbstractCloudSlave;
-import hudson.slaves.Cloud;
 import hudson.slaves.JNLPLauncher;
 import hudson.slaves.NodeProperty;
+import hudson.slaves.AbstractCloudComputer;
+import hudson.slaves.Cloud;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
@@ -53,7 +53,12 @@ public class AciAgent extends AbstractCloudSlave implements ISSHLaunchable {
 
     @DataBoundConstructor
     public AciAgent(AciCloud cloud, AciContainerTemplate template) throws Descriptor.FormException, IOException {
-        super(generateAgentName(template),
+        this(cloud, template, generateAgentName(template));
+    }
+
+    public AciAgent(AciCloud cloud, AciContainerTemplate template, String agentName)
+            throws Descriptor.FormException, IOException {
+        super(agentName,
                 "",
                 template.getRootFs(),
                 1,
@@ -61,7 +66,18 @@ public class AciAgent extends AbstractCloudSlave implements ISSHLaunchable {
                 template.getLabel(),
                 template.getLaunchMethodType().equals(Constants.LAUNCH_METHOD_JNLP)
                         ? new JNLPLauncher()
-                        : new SSHLauncher(),
+                        : new hudson.plugins.sshslaves.SSHLauncher(
+                            agentName,   // Host
+                            Integer.parseInt(template.getSshPort()),      // Port
+                            template.getSshCredentialsId(), // Credentials
+                            (String) null,  // JVM Options
+                            "/usr/local/openjdk-11/bin/java",      // JavaPath
+                            (String) null,  // Prefix Start Slave Command
+                            (String) null,  // Suffix Start Slave Command
+                            (Integer) null, // Connection Timeout in Seconds
+                            (Integer) null, // Maximum Number of Retries
+                            (Integer) null, // The number of seconds to wait between retries
+                            new NonVerifyingKeyVerificationStrategy()),
                 template.getRetentionStrategy(),
                 Collections.<NodeProperty<Node>>emptyList());
         this.credentialsId = cloud.getCredentialsId();
@@ -73,7 +89,7 @@ public class AciAgent extends AbstractCloudSlave implements ISSHLaunchable {
     }
 
     @Override
-    public AbstractCloudComputer createComputer() {
+    public AbstractCloudComputer<AciAgent> createComputer() {
         return new AciComputer(this);
     }
 
