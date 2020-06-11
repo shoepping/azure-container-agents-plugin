@@ -80,6 +80,7 @@ public class AciAgent extends AbstractCloudSlave implements ISSHLaunchable {
         this.sshPort = template.getSshPort();
         this.launchType = template.getLaunchMethodType();
         this.deployName = deployName;
+        this.setLabelString(template.getLabel());
     }
 
     @Override
