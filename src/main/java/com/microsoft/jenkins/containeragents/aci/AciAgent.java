@@ -35,6 +35,10 @@ import java.util.logging.Logger;
 public class AciAgent extends AbstractCloudSlave implements ISSHLaunchable {
     private static final Logger LOGGER = Logger.getLogger(AciAgent.class.getName());
 
+    private static final Integer LAUNCH_TIMEOUT_SECONDS = 60;
+    private static final Integer MAX_NUMBER_RETRIES  =10;
+    private static final Integer RETRY_WAIT_TIME = 15;
+
     private final String credentialsId;
 
     private final String cloudName;
@@ -70,9 +74,9 @@ public class AciAgent extends AbstractCloudSlave implements ISSHLaunchable {
                             "/usr/local/openjdk-11/bin/java",
                             (String) null,
                             (String) null,
-                            (Integer) null,
-                            (Integer) null,
-                            (Integer) null,
+                            LAUNCH_TIMEOUT_SECONDS,
+                            MAX_NUMBER_RETRIES,
+                            RETRY_WAIT_TIME,
                             new NonVerifyingKeyVerificationStrategy()),
                 template.getRetentionStrategy(),
                 Collections.<NodeProperty<Node>>emptyList());
