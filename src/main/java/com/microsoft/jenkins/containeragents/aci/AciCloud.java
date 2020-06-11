@@ -14,10 +14,12 @@ import hudson.model.Descriptor;
 import hudson.model.Item;
 import hudson.model.Label;
 import hudson.model.Node;
+import hudson.model.TaskListener;
 import hudson.slaves.Cloud;
 import hudson.slaves.EnvironmentVariablesNodeProperty;
 import hudson.slaves.NodeProvisioner;
 import hudson.util.ListBoxModel;
+import hudson.util.StreamTaskListener;
 import jenkins.model.Jenkins;
 import org.apache.commons.lang3.time.StopWatch;
 import org.kohsuke.stapler.AncestorInPath;
@@ -25,6 +27,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -114,11 +117,9 @@ public class AciCloud extends Cloud {
                                         waitToOnline(agent, template.getTimeout(), stopWatch);
                                     } else {
                                         addHost(agent);
-                                        Computer computer = agent.toComputer();
-                                        if (computer == null) {
-                                            throw new IllegalStateException("Agent node has been deleted");
-                                        }
-                                        computer.connect(false).get();
+                                        TaskListener taskListener = new StreamTaskListener(
+                                                System.out, Charset.defaultCharset());
+                                        agent.getLauncher().launch(agent.getComputer(), taskListener);
                                     }
                                     addIpEnv(agent);
 
