@@ -16,7 +16,6 @@ import hudson.plugins.sshslaves.verifiers.NonVerifyingKeyVerificationStrategy;
 import hudson.security.ACL;
 import hudson.slaves.AbstractCloudSlave;
 import hudson.slaves.JNLPLauncher;
-import hudson.slaves.NodeProperty;
 import hudson.slaves.AbstractCloudComputer;
 import hudson.slaves.Cloud;
 import jenkins.model.Jenkins;
@@ -59,11 +58,7 @@ public class AciAgent extends AbstractCloudSlave implements ISSHLaunchable {
     public AciAgent(AciCloud cloud, AciContainerTemplate template, String agentName, String deployName, String ip)
             throws Descriptor.FormException, IOException {
         super(agentName,
-                "",
                 template.getRootFs(),
-                1,
-                Mode.NORMAL,
-                template.getLabel(),
                 template.getLaunchMethodType().equals(Constants.LAUNCH_METHOD_JNLP)
                         ? new JNLPLauncher()
                         : new hudson.plugins.sshslaves.SSHLauncher(
@@ -77,9 +72,7 @@ public class AciAgent extends AbstractCloudSlave implements ISSHLaunchable {
                             LAUNCH_TIMEOUT_SECONDS,
                             MAX_NUMBER_RETRIES,
                             RETRY_WAIT_TIME,
-                            new NonVerifyingKeyVerificationStrategy()),
-                template.getRetentionStrategy(),
-                Collections.<NodeProperty<Node>>emptyList());
+                            new NonVerifyingKeyVerificationStrategy()));
         this.credentialsId = cloud.getCredentialsId();
         this.cloudName = cloud.getName();
         this.resourceGroup = cloud.getResourceGroup();
