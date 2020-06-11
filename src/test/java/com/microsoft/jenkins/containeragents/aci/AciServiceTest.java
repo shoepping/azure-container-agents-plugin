@@ -7,6 +7,7 @@ import com.microsoft.azure.management.Azure;
 import com.microsoft.azure.management.containerinstance.OperatingSystemTypes;
 import com.microsoft.jenkins.containeragents.PodEnvVar;
 import com.microsoft.jenkins.containeragents.remote.LaunchMethodTypeContent;
+import com.microsoft.jenkins.containeragents.util.AzureContainerUtils;
 import com.microsoft.jenkins.containeragents.util.Constants;
 import com.microsoft.rest.LogLevel;
 import hudson.slaves.RetentionStrategy;
@@ -80,8 +81,13 @@ public class AciServiceTest {
 
     @Test
     public void testCreateDeployment() throws Exception {
+        String agentName = AzureContainerUtils.generateName(
+                "ta-template", Constants.ACI_RANDOM_NAME_LENGTH);
+        String deployName = AzureContainerUtils.generateName(
+                "ta-template", Constants.ACI_DEPLOYMENT_RANDOM_NAME_LENGTH);
+
         AciService.createDeployment(
-                cloud, aciContainerTemplate, StopWatch.createStarted(), "agentName", "deployName");
+                cloud, aciContainerTemplate, StopWatch.createStarted(), agentName, deployName);
     }
 
 }
