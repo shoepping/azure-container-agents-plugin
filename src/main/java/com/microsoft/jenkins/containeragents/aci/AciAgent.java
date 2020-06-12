@@ -90,11 +90,14 @@ public class AciAgent extends AbstractCloudSlave implements ISSHLaunchable {
 
     @Override
     protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
+        LOGGER.log(Level.INFO, "Deleting container group (cloud: {0})", cloudName);
         final Computer computer = toComputer();
+        LOGGER.log(Level.INFO, "Found computer {0}", computer.getName());
         if (computer == null || StringUtils.isEmpty(cloudName)) {
             return;
         }
-        final Cloud cloud = Jenkins.getInstance().getCloud(cloudName);
+        final Cloud cloud = Jenkins.get().getCloud(cloudName);
+        LOGGER.log(Level.INFO, "Found cloud {0}", cloud.name);
         if (cloud == null) {
             return;
         }
