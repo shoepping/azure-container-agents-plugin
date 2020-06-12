@@ -137,6 +137,7 @@ public final class AciService {
                 }
             }
         } catch (Exception e) {
+            e.printStackTrace();
             LOGGER.log(Level.WARNING, "Delete ACI deployment: {0} failed: {1}",
                     new Object[] {deployName, e});
             properties.put(Constants.AI_ACI_NAME, containerGroupName);
