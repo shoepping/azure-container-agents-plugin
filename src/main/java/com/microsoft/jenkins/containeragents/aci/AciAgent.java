@@ -81,6 +81,7 @@ public class AciAgent extends AbstractCloudSlave implements ISSHLaunchable {
         this.launchType = template.getLaunchMethodType();
         this.deployName = deployName;
         this.setLabelString(template.getLabel());
+        this.setRetentionStrategy(template.getRetentionStrategy());
     }
 
     @Override
